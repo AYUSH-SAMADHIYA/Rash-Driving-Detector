@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en"> <!-- Theme is now controlled by JavaScript -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driving Intelligence Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom Styles -->
+    <style>
+        /* Base styles */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        /* Light Theme */
+        :root {
+            --bg-color: #f3f4f6;
+            --text-color: #1f2937;
+            --card-bg-color: #ffffff;
+            --card-border-color: #e5e7eb;
+            --sidebar-bg-color: #ffffff;
+            --text-muted-color: #6b7280;
+            --chart-grid-color: #e5e7eb;
+        }
+
+        /* Dark Theme */
+        html.dark {
+            --bg-color: #111827;
+            --text-color: #d1d5db;
+            --card-bg-color: #1f2937;
+            --card-border-color: #374151;
+            --sidebar-bg-color: #111827;
+            --text-muted-color: #9ca3af;
+            --chart-grid-color: #374151;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .card { 
+            background-color: var(--card-bg-color); 
+            border-color: var(--card-border-color);
+            border-radius: 0.75rem; 
+            border-width: 1px;
+            padding: 1.5rem; 
+            transition: all 0.3s;
+        }
+        .sidebar {
+             background-color: var(--sidebar-bg-color);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .fade-in-up {
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="flex">
+
+    <!-- Sidebar -->
+    <aside class="sidebar w-64 p-6 flex flex-col h-screen sticky top-0 border-r" style="border-color: var(--card-border-color);">
+        <div class="flex items-center mb-10">
+            <div class="p-2 bg-blue-600 rounded-lg mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            </div>
+            <h1 class="text-xl font-bold" style="color: var(--text-color);">Driving Intel</h1>
+        </div>
+        <nav class="flex-grow">
+            <!-- File Upload Section -->
+            <div id="upload-section">
+                <h2 class="text-xs font-semibold uppercase mb-4" style="color: var(--text-muted-color);">Data Input</h2>
+                <label for="csv-file" class="w-full text-sm text-center py-3 px-4 rounded-lg border-2 border-dashed hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer flex flex-col items-center" style="border-color: var(--card-border-color); color: var(--text-muted-color);">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                    <span id="file-name-display">Choose a CSV File</span>
+                </label>
+                <input type="file" id="csv-file" accept=".csv" class="hidden"/>
+                <button id="analyze-btn" class="mt-4 w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed transition duration-300" disabled>Analyze Drive</button>
+            </div>
+        </nav>
+        <!-- Theme Toggle -->
+        <div class="mt-4">
+            <button id="theme-toggle" class="w-full flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                <svg id="theme-icon-light" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                <svg id="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 p-6 overflow-y-auto h-screen">
+        <header class="mb-6">
+            <h1 id="dashboard-title" class="text-3xl font-bold">Dashboard</h1>
+            <p id="dashboard-subtitle" style="color: var(--text-muted-color);">Please upload a file to begin analysis.</p>
+        </header>
+
+        <!-- Loading Spinner -->
+        <div id="loading" class="hidden flex flex-col justify-center items-center mt-8 card">
+            <div class="spinner"></div>
+            <p class="mt-4" style="color: var(--text-muted-color);">Performing deep learning analysis...</p>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" class="hidden opacity-0">
+            <!-- Summary Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="card stat-card" style="animation-delay: 100ms;">
+                    <h3 class="text-sm font-medium" style="color: var(--text-muted-color);">Total Segments</h3>
+                    <p id="total-segments" class="text-3xl font-bold mt-1">0</p>
+                </div>
+                <div class="card stat-card" style="animation-delay: 200ms;">
+                    <h3 class="text-sm font-medium" style="color: var(--text-muted-color);">Anomalies Detected</h3>
+                    <p id="anomalies-detected" class="text-3xl font-bold text-red-500 mt-1">0</p>
+                </div>
+                <div class="card stat-card" style="animation-delay: 300ms;">
+                    <h3 class="text-sm font-medium" style="color: var(--text-muted-color);">Most Common Road</h3>
+                    <p id="common-road" class="text-3xl font-bold text-blue-600 mt-1">-</p>
+                </div>
+            </div>
+
+             <!-- Other cards will go here -->
+            <div class="card mb-6 animated-card" style="animation-delay: 400ms;">
+                <label for="threshold" class="block text-sm font-medium" style="color: var(--text-muted-color);">Anomaly Sensitivity Threshold:</label>
+                <div class="flex items-center mt-2">
+                    <input type="range" id="threshold" min="0.5" max="2.0" value="0.9" step="0.05" class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                    <span id="threshold-value" class="ml-4 font-mono text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-gray-700 px-2 py-1 rounded-md text-sm">0.90</span>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6 animated-card" style="animation-delay: 500ms;">
+                <div class="lg:col-span-3 card">
+                    <h3 class="font-semibold mb-2">Anomaly Score Over Time</h3>
+                    <canvas id="error-chart"></canvas>
+                </div>
+                <div class="lg:col-span-2 card flex flex-col justify-center items-center">
+                    <h3 class="font-semibold mb-2">Road Type Distribution</h3>
+                    <div class="w-full max-w-xs"><canvas id="road-pie-chart"></canvas></div>
+                </div>
+            </div>
+            <div class="card mb-6 animated-card" style="animation-delay: 600ms;">
+                <h3 class="font-semibold mb-2">Raw Sensor Data (Acceleration & Gyroscope)</h3>
+                <canvas id="sensor-chart"></canvas>
+            </div>
+            <div class="card animated-card" style="animation-delay: 700ms;">
+                <h3 class="font-semibold mb-4">Detailed Segment Analysis</h3>
+                <div class="overflow-y-auto rounded-lg border max-h-96 custom-scrollbar" style="border-color: var(--card-border-color);">
+                    <table class="min-w-full divide-y" style="divide-color: var(--card-border-color);">
+                        <thead class="sticky top-0" style="background-color: var(--card-bg-color);">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-muted-color);">Segment</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-muted-color);">Road Type</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-muted-color);">Error</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--text-muted-color);">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-table" class="divide-y" style="divide-color: var(--card-border-color);"></tbody>
+                    </table>
+                </div>
+            </div>
+            <button id="reset-btn" class="mt-6 w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 transition duration-300">Analyze a New File</button>
+        </div>
+    </div>
+
+    <script>
+        // --- JavaScript Logic ---
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const csvFileInput = document.getElementById('csv-file');
+        const fileNameDisplay = document.getElementById('file-name-display');
+        const uploadSection = document.getElementById('upload-section');
+        const resultsSection = document.getElementById('results-section');
+        const loadingSpinner = document.getElementById('loading');
+        const resultsTable = document.getElementById('results-table');
+        const thresholdSlider = document.getElementById('threshold');
+        const thresholdValue = document.getElementById('threshold-value');
+        const dashboardTitle = document.getElementById('dashboard-title');
+        const dashboardSubtitle = document.getElementById('dashboard-subtitle');
+        const themeToggle = document.getElementById('theme-toggle');
+        const lightIcon = document.getElementById('theme-icon-light');
+        const darkIcon = document.getElementById('theme-icon-dark');
+        
+        let fullData = {};
+        let charts = {};
+
+        // --- Theme Management ---
+        const applyTheme = (theme) => {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                lightIcon.classList.add('hidden');
+                darkIcon.classList.remove('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                lightIcon.classList.remove('hidden');
+                darkIcon.classList.add('hidden');
+            }
+            // Update Chart.js defaults
+            Chart.defaults.color = theme === 'dark' ? '#9ca3af' : '#4b5563';
+            Chart.defaults.borderColor = theme === 'dark' ? '#374151' : '#e5e7eb';
+            // Re-render charts if they exist
+            if (fullData.results) updateDashboard();
+        };
+
+        themeToggle.addEventListener('click', () => {
+            const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+            localStorage.setItem('theme', newTheme);
+            applyTheme(newTheme);
+        });
+
+        // Apply saved theme on load
+        const savedTheme = localStorage.getItem('theme') || 'light'; // Default to light
+        applyTheme(savedTheme);
+
+
+        // --- Event Listeners ---
+        csvFileInput.addEventListener('change', () => {
+            if (csvFileInput.files.length > 0) {
+                fileNameDisplay.textContent = csvFileInput.files[0].name;
+                analyzeBtn.disabled = false;
+            } else {
+                fileNameDisplay.textContent = 'Choose a CSV File';
+                analyzeBtn.disabled = true;
+            }
+        });
+        analyzeBtn.addEventListener('click', handleAnalysis);
+        resetBtn.addEventListener('click', resetApp);
+        thresholdSlider.addEventListener('input', () => {
+            thresholdValue.textContent = parseFloat(thresholdSlider.value).toFixed(2);
+            updateDashboard();
+        });
+
+        async function handleAnalysis() {
+            const file = csvFileInput.files[0];
+            if (!file) { alert('Please select a CSV file first.'); return; }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            dashboardTitle.classList.add('hidden');
+            dashboardSubtitle.classList.add('hidden');
+            loadingSpinner.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+
+            try {
+                const response = await fetch('/analyze', { method: 'POST', body: formData });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Analysis failed on the server.');
+                }
+                fullData = await response.json();
+                if (!fullData || !fullData.results || !Array.isArray(fullData.results)) {
+                    throw new Error('Received an invalid or empty response from the server.');
+                }
+                
+                loadingSpinner.classList.add('hidden');
+                resultsSection.style.opacity = '0'; // Prepare for animation
+                resultsSection.classList.remove('hidden');
+                
+                // Add animation classes
+                document.querySelectorAll('.stat-card, .animated-card').forEach((el, i) => {
+                    el.classList.add('fade-in-up');
+                    el.style.animationDelay = `${i * 100}ms`;
+                });
+
+                dashboardTitle.textContent = `Analysis for: ${file.name}`;
+                dashboardTitle.classList.remove('hidden');
+                
+                // Use a short delay to allow the DOM to update before starting animation
+                setTimeout(() => {
+                    resultsSection.style.opacity = '1';
+                    updateDashboard();
+                }, 10);
+
+
+            } catch (error) {
+                alert(`An error occurred: ${error.message}`);
+                resetApp();
+            }
+        }
+
+        function updateDashboard() {
+            const threshold = parseFloat(thresholdSlider.value);
+            const results = fullData.results;
+            if (!results) return;
+
+            resultsTable.innerHTML = '';
+            let anomalyCount = 0;
+            const roadCounts = {};
+
+            results.forEach(item => {
+                const isAnomaly = item.error > threshold;
+                if (isAnomaly) anomalyCount++;
+                roadCounts[item.road_type] = (roadCounts[item.road_type] || 0) + 1;
+
+                const row = document.createElement('tr');
+                row.className = isAnomaly ? 'bg-red-500/10' : '';
+                row.innerHTML = `
+                    <td class="px-6 py-3 whitespace-nowrap text-sm font-medium">${item.segment}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm" style="color: var(--text-muted-color);">${item.road_type}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm" style="color: var(--text-muted-color);">${item.error.toFixed(4)}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm font-bold ${isAnomaly ? 'text-red-500' : 'text-green-500'}">
+                        ${isAnomaly ? 'Anomaly' : 'Normal'}
+                    </td>
+                `;
+                resultsTable.appendChild(row);
+            });
+
+            document.getElementById('total-segments').textContent = results.length;
+            document.getElementById('anomalies-detected').textContent = anomalyCount;
+            const commonRoad = Object.keys(roadCounts).length ? Object.entries(roadCounts).sort((a, b) => b[1] - a[1])[0][0] : '-';
+            document.getElementById('common-road').textContent = commonRoad;
+
+            renderErrorChart(threshold);
+            renderPieChart(roadCounts);
+            renderSensorChart();
+        }
+
+        function renderErrorChart(threshold) {
+            const ctx = document.getElementById('error-chart').getContext('2d');
+            const labels = fullData.results.map(d => d.segment);
+            const data = fullData.results.map(d => d.error);
+
+            if (charts.error) charts.error.destroy();
+            charts.error = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Reconstruction Error', data: data, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', tension: 0.2, fill: true, borderWidth: 2
+                    }, {
+                        label: 'Anomaly Threshold', data: Array(data.length).fill(threshold), borderColor: '#ef4444', borderDash: [5, 5], pointRadius: 0, fill: false, borderWidth: 2
+                    }]
+                },
+                options: { scales: { y: { beginAtZero: true, grid: { color: Chart.defaults.borderColor } }, x: { grid: { color: Chart.defaults.borderColor } } }, plugins: { legend: { display: false } } }
+            });
+        }
+        
+        function renderPieChart(roadCounts) {
+            const ctx = document.getElementById('road-pie-chart').getContext('2d');
+            if (charts.pie) charts.pie.destroy();
+            charts.pie = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(roadCounts),
+                    datasets: [{
+                        label: 'Road Types',
+                        data: Object.values(roadCounts),
+                        backgroundColor: ['#3b82f6', '#10b981', '#f97316', '#8b5cf6'],
+                        borderColor: 'var(--card-bg-color)',
+                        hoverOffset: 8
+                    }]
+                },
+                options: { plugins: { legend: { position: 'bottom', labels: { color: Chart.defaults.color } } } }
+            });
+        }
+        
+        function renderSensorChart() {
+            const ctx = document.getElementById('sensor-chart').getContext('2d');
+            const labels = Array.from({length: fullData.sensor_data.acc_x.length}, (_, i) => i + 1);
+
+            if (charts.sensor) charts.sensor.destroy();
+            charts.sensor = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'X-Axis Acceleration', data: fullData.sensor_data.acc_x, borderColor: 'rgba(239, 68, 68, 0.6)', pointRadius: 0, borderWidth: 1.5
+                    }, {
+                        label: 'Z-Axis Gyroscope', data: fullData.sensor_data.gyro_z, borderColor: 'rgba(59, 130, 246, 0.6)', pointRadius: 0, borderWidth: 1.5
+                    }]
+                },
+                options: { scales: { x: { ticks: { display: false }, grid: { color: Chart.defaults.borderColor } }, y: { grid: { color: Chart.defaults.borderColor } } }, plugins: { legend: { position: 'bottom', labels: { color: Chart.defaults.color } } } }
+            });
+        }
+
+        function resetApp() {
+            resultsSection.classList.add('hidden');
+            loadingSpinner.classList.add('hidden');
+            dashboardTitle.textContent = 'Dashboard';
+            dashboardSubtitle.classList.remove('hidden');
+            csvFileInput.value = '';
+            fileNameDisplay.textContent = 'Choose a CSV File';
+            analyzeBtn.disabled = true;
+            fullData = {};
+        }
+    </script>
+
+</body>
+</html>
